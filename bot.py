@@ -1,17 +1,19 @@
 import asyncio
 import re
 import os
+import logging
 from aiohttp import web
 from pyrogram import Client, filters, enums, idle
 from pyrogram.types import ChatPermissions, Message
 
 # -----------------------------------------------------------
-# 🔥 RENDER FIX: Event Loop Fix & Web Server Setup
+# 🔥 LOGGING SETUP (এরর দেখার জন্য খুবই গুরুত্বপূর্ণ)
 # -----------------------------------------------------------
-try:
-    asyncio.get_event_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # কনফিগারেশন
 API_ID = 38892252
@@ -41,7 +43,7 @@ async def start_server():
     # Render এর পোর্ট অথবা ডিফল্ট 8080
     port = int(os.environ.get("PORT", 8080))
     await web.TCPSite(runner, '0.0.0.0', port).start()
-    print(f"✅ Web Server Started on Port {port}")
+    logger.info(f"✅ Web Server Started on Port {port}")
 
 # -----------------------------------------------------------
 # বট লজিক শুরু
@@ -296,20 +298,28 @@ async def start(c, m):
         await m.reply("I am Alive! ✅")
 
 # -----------------------------------------------------------
-# MAIN EXECUTION (BOT + WEB SERVER)
+# MAIN EXECUTION (FIXED)
 # -----------------------------------------------------------
 async def main():
-    # ওয়েব সার্ভার চালু করা (Render এর জন্য)
-    await start_server()
-    
-    # বট চালু করা
-    await app.start()
-    print("✅ Bot Started Successfully on Render!")
-    
-    # বট যেন বন্ধ না হয়
-    await idle()
-    await app.stop()
+    try:
+        # ওয়েব সার্ভার চালু করা
+        await start_server()
+        
+        # বট চালু করা
+        logger.info("🤖 Starting Bot...")
+        await app.start()
+        logger.info(f"✅ Bot Started as {app.me.first_name}")
+        
+        # বট যেন বন্ধ না হয়
+        await idle()
+        await app.stop()
+    except Exception as e:
+        logger.error(f"❌ CRITICAL ERROR: {e}")
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        logger.error(f"❌ Setup Error: {e}")
